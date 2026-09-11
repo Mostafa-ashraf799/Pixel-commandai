@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>لوحة الإدارة — Pixel CommandAI</title>
+<meta name="robots" content="noindex, nofollow" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg-0: #05060a;
+    --bg-1: #0a0c14;
+    --bg-card: rgba(20, 24, 36, 0.65);
+    --neon-green: #00ff9d;
+    --neon-cyan: #00e5ff;
+    --neon-purple: #b14bff;
+    --text: #e9ecf3;
+    --muted: #8a93a6;
+    --border: rgba(0, 255, 157, 0.18);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+    background: var(--bg-0);
+    color: var(--text);
+    line-height: 1.7;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; }
+  header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 28px; flex-wrap: wrap; gap: 12px;
+  }
+  h1 { font-size: 1.6rem; color: var(--neon-cyan); }
+  .sub { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+  a.back { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
+  a.back:hover { color: var(--neon-cyan); }
+
+  #gate {
+    max-width: 480px; margin: 80px auto; text-align: center;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 40px 32px;
+  }
+  #gate p { color: var(--muted); margin-top: 10px; line-height: 1.8; }
+  #gate input {
+    width: 100%; padding: 12px 14px; margin: 16px 0 10px;
+    border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.3); color: var(--text); font-family: 'Cairo', sans-serif;
+  }
+  #gate button, .btn {
+    padding: 10px 18px; border-radius: 8px; border: 1px solid rgba(0,229,255,0.3);
+    background: rgba(0,229,255,0.1); color: var(--neon-cyan); cursor: pointer;
+    font-family: 'Cairo', sans-serif; font-size: 0.9rem;
+  }
+  #gate .err { color: #ff6b6b; font-size: 0.85rem; margin-top: 10px; min-height: 1.2em; }
+
+  .stats-row { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  .stat-card {
+    flex: 1; min-width: 140px; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 20px;
+  }
+  .stat-card .num { font-size: 1.8rem; font-weight: 800; color: var(--neon-green); }
+  .stat-card .label { color: var(--muted); font-size: 0.82rem; margin-top: 4px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: var(--bg-card); border-radius: 12px; overflow: hidden; }
+  thead tr { text-align: right; border-bottom: 1px solid rgba(0,229,255,0.25); color: var(--neon-cyan); }
+  th, td { padding: 10px 12px; }
+  tbody tr { border-bottom: 1px solid rgba(255,255,255,0.06); }
+  tbody tr:hover { background: rgba(0,229,255,0.04); }
+  .plan-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.78rem;
+    background: rgba(0,229,255,0.12); color: var(--neon-cyan);
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+  .search-box {
+    width: 100%; max-width: 320px; padding: 8px 12px; margin-bottom: 16px;
+    border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.3); color: var(--text); font-family: 'Cairo', sans-serif;
+  }
+</style>
+</head>
+<body>
+<div id="gate">
+  <h1 style="margin-bottom:4px;">لوحة الإدارة</h1>
+  <p>سجّل دخولك بحسابك الإداري للمتابعة.</p>
+  <input type="email" id="login-email" placeholder="البريد الإلكتروني" autocomplete="email" />
+  <input type="password" id="login-password" placeholder="كلمة المرور" autocomplete="current-password" />
+  <button onclick="handleAdminLogin()">دخول</button>
+  <div class="err" id="gate-error"></div>
+</div>
+
+<div class="wrap" id="dashboard" style="display:none;">
+  <header>
+    <div>
+      <h1>لوحة إدارة المستخدمين</h1>
+      <p class="sub">Pixel CommandAI — بيانات حية من قاعدة البيانات</p>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <a class="back" href="./index.html">&larr; رجوع للموقع</a>
+      <button class="btn" onclick="handleAdminLogout()">تسجيل الخروج</button>
+    </div>
+  </header>
+
+  <div class="stats-row" id="stats-row"></div>
+
+  <input type="text" class="search-box" id="search-box" placeholder="ابحث بالاسم أو الإيميل..." oninput="renderTable()" />
+
+  <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>الاسم</th>
+          <th>الإيميل</th>
+          <th>الهاتف</th>
+          <th>الاستخدام/الوظيفة</th>
+          <th>الدولة</th>
+          <th>الخطة</th>
+          <th>% الاستهلاك</th>
+          <th>تاريخ التسجيل</th>
+        </tr>
+      </thead>
+      <tbody id="admin-users-tbody">
+        <tr><td colspan="8" style="padding:16px; color:var(--muted); text-align:center;">جاري التحميل...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // Same project credentials as the main site — anon key is not a secret,
+  // it's protected server-side by the is_admin() check on every query.
+  const PIXEL_SUPABASE_URL = "https://fazjxaukksdkeztejeow.supabase.co";
+  const PIXEL_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhemp4YXVra3Nka2V6dGVqZW93Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2MjI3NTQsImV4cCI6MjEwNDE5ODc1NH0.JBG5Va1EmbbXLa7VMPrMMSqB5IN4BU67iMb5ZDhz3FI";
+  const pixelSupabase = window.supabase.createClient(PIXEL_SUPABASE_URL, PIXEL_SUPABASE_ANON_KEY);
+
+  let allUsers = [];
+
+  async function checkAdminAndLoad() {
+    const { data: { session } } = await pixelSupabase.auth.getSession();
+    if (!session) return; // stay on the login gate
+
+    const { data: profile } = await pixelSupabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', session.user.id)
+      .maybeSingle();
+
+    if (!profile?.is_admin) {
+      document.getElementById('gate-error').textContent = 'هذا الحساب مش أدمن — مش هتقدر تشوف اللوحة دي.';
+      await pixelSupabase.auth.signOut();
+      return;
+    }
+
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    await loadAdminUserTable();
+  }
+
+  async function handleAdminLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errEl = document.getElementById('gate-error');
+    errEl.textContent = '';
+    const { error } = await pixelSupabase.auth.signInWithPassword({ email, password });
+    if (error) { errEl.textContent = error.message; return; }
+    checkAdminAndLoad();
+  }
+
+  async function handleAdminLogout() {
+    await pixelSupabase.auth.signOut();
+    location.reload();
+  }
+
+  async function loadAdminUserTable() {
+    // get_admin_user_overview() re-checks is_admin() server-side on every
+    // call — this page's own gate check above is a UX convenience, not the
+    // real security boundary.
+    const { data, error } = await pixelSupabase.rpc('get_admin_user_overview');
+    const tbody = document.getElementById('admin-users-tbody');
+
+    if (error) {
+      tbody.innerHTML = `<tr><td colspan="8" style="padding:16px; color:#ff6b6b; text-align:center;">تعذر تحميل البيانات: ${error.message}</td></tr>`;
+      return;
+    }
+
+    allUsers = data || [];
+    renderStats();
+    renderTable();
+  }
+
+  function renderStats() {
+    const total = allUsers.length;
+    const byPlan = allUsers.reduce((acc, u) => {
+      const p = u.plan_id || 'free';
+      acc[p] = (acc[p] || 0) + 1;
+      return acc;
+    }, {});
+    const statsRow = document.getElementById('stats-row');
+    statsRow.innerHTML = `
+      <div class="stat-card"><div class="num">${total}</div><div class="label">إجمالي المستخدمين</div></div>
+      <div class="stat-card"><div class="num">${byPlan.pro || 0}</div><div class="label">مستخدمين Pro</div></div>
+      <div class="stat-card"><div class="num">${byPlan.basic || 0}</div><div class="label">مستخدمين Basic</div></div>
+      <div class="stat-card"><div class="num">${byPlan.free || 0}</div><div class="label">مستخدمين Free</div></div>
+    `;
+  }
+
+  function renderTable() {
+    const q = document.getElementById('search-box').value.trim().toLowerCase();
+    const filtered = !q ? allUsers : allUsers.filter(u =>
+      (u.full_name || '').toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q)
+    );
+
+    const tbody = document.getElementById('admin-users-tbody');
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="padding:16px; color:var(--muted); text-align:center;">لا يوجد نتائج.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(u => {
+      const joined = u.created_at ? new Date(u.created_at).toLocaleDateString('ar-EG') : '—';
+      const usagePct = (u.usage_percent ?? 0) + '%';
+      return `<tr>
+        <td>${u.full_name || '—'}</td>
+        <td class="mono">${u.email || '—'}</td>
+        <td>${u.phone || '—'}</td>
+        <td>${u.usage_purpose || '—'}</td>
+        <td>${u.country_code || '—'}</td>
+        <td><span class="plan-badge">${u.plan_display_name || u.plan_id || '—'}</span></td>
+        <td>${usagePct}</td>
+        <td style="color:var(--muted); font-size:0.8rem;">${joined}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  document.addEventListener('DOMContentLoaded', checkAdminAndLoad);
+</script>
+</body>
+</html>
